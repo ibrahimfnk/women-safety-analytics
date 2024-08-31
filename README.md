@@ -9,7 +9,7 @@ To set up the project on your local machine, follow these steps:
 ```bash
 # Clone the repository
 git clone https://github.com/ibrahimfnk/women-safety-analytics.git
-cd repository
+cd women-safety-analytics
 
 # Create a virtual environment
 python -m venv venv
