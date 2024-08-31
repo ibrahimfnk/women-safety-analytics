@@ -1,0 +1,5 @@
+{
+    "yolo_model": "ml\\models_new\\yolov8x_person_face.pt",
+    "gender_proto": "ml\\models_new\\gender_deploy.prototxt",
+    "gender_model": "ml\\models_new\\gender_net.caffemodel"
+  }

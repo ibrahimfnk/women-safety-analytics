@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Gender Detection</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Real-Time Gender Detection</h1>
+    </header>
+    
+    <div class="container">
+        <div class="stats">
+            <p>Male Count: <span id="male-count">0</span></p>
+            <p>Female Count: <span id="female-count">0</span></p>
+        </div>
+    </div>
+
+    <div class="video-container">
+        <img src="" id="video">
+    </div>
+
+    <script>
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            socket.emit('start_video');
+        });
+
+        socket.on('update_counts', (data) => {
+            document.getElementById('male-count').textContent = data.male_count;
+            document.getElementById('female-count').textContent = data.female_count;
+        });
+
+        socket.on('video_frame', (frame) => {
+            document.getElementById('video').src = 'data:image/jpeg;base64,' + frame;
+        });
+    </script>
+</body>
+</html>
