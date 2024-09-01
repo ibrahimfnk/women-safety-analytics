@@ -73,12 +73,14 @@ def handle_connect():
 
 @socketio.on('start_video')
 def handle_video():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture('exx4.mp4')
 
     if not cap.isOpened():
         emit('error', {'message': 'Error: Could not open video.'})
         return
     
+    alert_start_time = None
+    alert_duration = 1  # Duration in seconds
     global last_record_time
     record_interval = 5
     last_record_time = time.time()  # Initialize last_record_time here
@@ -119,6 +121,22 @@ def handle_video():
         female_counts.append(female_count)
 
         current_time = time.time()
+
+        if female_count < male_count:  # Adjust the threshold as needed
+            if alert_start_time is None:
+                alert_start_time = time.time()  # Start the timer
+            elif time.time() - alert_start_time >= alert_duration:
+                # Apply red overlay to the frame
+                overlay = frame.copy()
+                overlay[:] = [0, 0, 255]  # Red color
+                alpha = 0.3  # Transparency factor
+                cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+
+                # Emit alert to the client
+                socketio.emit('alert', {'message': 'Female in danger!'})
+
+        else:
+            alert_start_time = None #Reset alert timer
 
         # Check if 5 seconds have passed
         if current_time - last_record_time >= record_interval:
