@@ -3,6 +3,8 @@ body {
     margin: 0;
     padding: 0;
     background-color: #f4f4f4;
+    background-image: url(/static/img/4dce1541-8931-4bb3-b22b-943de49feb18.png);
+    background-size: cover;
 }
 
 header {

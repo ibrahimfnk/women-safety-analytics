@@ -19,6 +19,8 @@ header h1 {
 
 .container {
     display: flex;
+    margin-top: 20px;
+    flex-wrap: wrap;
 }
 
 .count-info {
@@ -46,15 +48,64 @@ header h1 {
     color: #333;
 }
 
-.video-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 20px;
-}
+
 
 img {
     width: 100%;
-    max-width: 600px;
+    max-width: 640px;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* dashboard.css */
+.video-container {
+    width: 640px; /* Fixed width */
+    height: 480px; /* Fixed height */
+    margin: 0 auto; /* Center the video container */
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0; /* Light background to show container before video loads */
+}
+
+#video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures the video covers the entire container */
+    display: block;
+}
+
+#loader {
+    position: absolute;
+}
+
+/* Sidebar container */
+.sidebar {
+    height: 100%;
+    width: 250px;
+    position: fixed;
+    top: 0;
+    right: -250px; /* Initially hidden */
+    background-color: #333;
+    overflow-y: auto;
+    transition: right 0.5s ease-in-out;
+    padding-top: 60px;
+    z-index: 1000;
+    color: white;
+}
+
+/* Alert styling */
+.alert {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #dc3545; /* Red background for danger alerts */
+    border-radius: 5px;
+    font-size: 14px;
+    color: white;
+}
+
+/* Chart container styling */
+.chart-container {
+    margin: 20px;
 }

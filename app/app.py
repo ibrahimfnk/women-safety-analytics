@@ -16,7 +16,7 @@ csv_file_path = 'gender_counts.csv'
 if not os.path.exists(csv_file_path):
     with open(csv_file_path, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        csv_writer.writerow(['Time', 'Average Male Count', 'Average Female Count'])
+        csv_writer.writerow(['Time', 'Average Male Count', 'Average Female Count', 'Alert Trigger'])
 
 #Load config
 #with open('config.json') as config_file:
@@ -30,7 +30,7 @@ app = Flask(__name__)
 socketio = SocketIO(app)
 
 # Load YOLOv8 model for face detection
-yolo_model = YOLO(r'..\ml\models_new\yolov8x_person_face.pt')  # Ensure this model is only for face detection
+yolo_model = YOLO(r'..\ml\models_new\yolov8nanoFaceDetect.pt')  # Ensure this model is only for face detection
 
 # Load gender classification model (OpenCV DNN)
 genderProto = r"..\ml\models_new\gender_deploy.prototxt"
@@ -86,6 +86,7 @@ def handle_video():
     last_record_time = time.time()  # Initialize last_record_time here
     male_counts = []
     female_counts = []
+    alert_triggered = False  # Initialize alert trigger flag
     
 
     while True:
@@ -122,35 +123,44 @@ def handle_video():
 
         current_time = time.time()
 
-        if female_count < male_count:  # Adjust the threshold as needed
-            if alert_start_time is None:
-                alert_start_time = time.time()  # Start the timer
-            elif time.time() - alert_start_time >= alert_duration:
-                # Apply red overlay to the frame
-                overlay = frame.copy()
-                overlay[:] = [0, 0, 255]  # Red color
-                alpha = 0.3  # Transparency factor
-                cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+        danger_ratio = 2.0  # Adjust this ratio based on your specific use case
+        alert_duration = 5  # Duration to wait before triggering an alert (in seconds)
+
+        if female_count > 0:  # Ensure there's at least one female detected
+            male_female_ratio = male_count / female_count
+
+            if male_female_ratio >= danger_ratio:  # Check if the ratio is concerning
+                if alert_start_time is None:
+                    alert_start_time = time.time()  # Start the timer
+                elif time.time() - alert_start_time >= alert_duration:
+                    # Apply red overlay to the frame
+                    overlay = frame.copy()
+                    overlay[:] = [0, 0, 255]  # Red color
+                    alpha = 0.3  # Transparency factor
+                    cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
 
                 # Emit alert to the client
-                socketio.emit('alert', {'message': 'Female in danger!'})
-
+                socketio.emit('alert', {'message': 'Female in danger due to male dominance!'})
+                alert_triggered = True
+            else:
+                alert_start_time = None  # Reset alert timer if ratio is not concerning
         else:
-            alert_start_time = None #Reset alert timer
+            alert_start_time = None  # Reset alert timer if no females are detected
 
         # Check if 5 seconds have passed
         if current_time - last_record_time >= record_interval:
-            avg_male_count = np.mean(male_counts)/2 if male_counts else 0
-            avg_female_count = np.mean(female_counts)/2 if female_counts else 0
+            avg_male_count = np.mean(male_counts) if male_counts else 0
+            avg_female_count = np.mean(female_counts) if female_counts else 0
 
             with open(csv_file_path, mode='a', newline='') as csv_file:
                 csv_writer = csv.writer(csv_file)
-                csv_writer.writerow([time.strftime('%Y-%m-%d %H:%M:%S'), avg_male_count, avg_female_count])
+                csv_writer.writerow([time.strftime('%Y-%m-%d %H:%M:%S'), avg_male_count, avg_female_count,0 if alert_triggered else 1])
 
             # Reset for the next interval
             male_counts = []
             female_counts = []
             last_record_time = current_time
+            alert_triggered = False  # Reset alert flag
 
         # Encode the frame to send to the client
         _, buffer = cv2.imencode('.jpg', frame)
@@ -158,7 +168,7 @@ def handle_video():
 
         # Emit the frame and the counts to the client
         socketio.emit('video_frame', frame_encoded)
-        socketio.emit('update_counts', {'male_count': round(male_count/2), 'female_count': round(female_count/2)})
+        socketio.emit('update_counts', {'male_count': male_count, 'female_count': female_count})
 
     cap.release()
 
