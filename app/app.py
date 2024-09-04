@@ -73,7 +73,7 @@ def handle_connect():
 
 @socketio.on('start_video')
 def handle_video():
-    cap = cv2.VideoCapture('exx4.mp4')
+    cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
         emit('error', {'message': 'Error: Could not open video.'})
