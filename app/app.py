@@ -7,6 +7,7 @@ import base64
 import time
 import csv
 import numpy as np
+import mediapipe as mp
 
 from ultralytics import YOLO
 
@@ -28,6 +29,10 @@ if not os.path.exists(csv_file_path):
 
 app = Flask(__name__)
 socketio = SocketIO(app)
+
+mp_hands = mp.solutions.hands
+hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7)
+mp_drawing = mp.solutions.drawing_utils
 
 # Load YOLOv8 model for face detection
 yolo_model = YOLO(r'..\ml\models_new\yolov8nanoFaceDetect.pt')  # Ensure this model is only for face detection
@@ -56,6 +61,17 @@ def classify_gender(genderNet, faceImage, genderList):
     genderPrediction = genderNet.forward()
     gender = genderList[genderPrediction[0].argmax()]
     return gender
+
+def detect_distress_gesture(hand_landmarks):
+    thumb_tip = hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP]
+    index_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_MCP]
+    pinky_mcp = hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_MCP]
+    
+    if (thumb_tip.x < index_mcp.x and 
+        hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y > index_mcp.y and 
+        hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP].y > pinky_mcp.y):
+        return True
+    return False
 
 
 
@@ -117,6 +133,15 @@ def handle_video():
                 cv2.rectangle(frame, (fx1, fy1), (fx2, fy2), color, 2)
                 cv2.putText(frame, gender, (fx1, fy1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
+        if gender == "Female":
+            results = hands.process(frame)
+
+            if results.multi_hand_landmarks:
+                for hand_landmarks in results.multi_hand_landmarks:
+                    mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+                    if detect_distress_gesture(hand_landmarks):
+                        cv2.putText(frame, "Distress Signal Detected!", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        socketio.emit('alert', {'message': 'Distress Gesture Detected!'})
         # Collect counts
         male_counts.append(male_count)
         female_counts.append(female_count)
